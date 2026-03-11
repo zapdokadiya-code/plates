@@ -4,7 +4,9 @@ import os
 import sys
 
 if sys.stdout.encoding != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
+    # Use hasattr to prevent static type checkers (and older Pythons) from complaining
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
 
 csv_file = "plate_log.csv"
 
@@ -111,6 +113,7 @@ plt.xlabel('Plate Number')
 plt.ylabel('Frequency')
 plt.xticks(rotation=45, ha='right')
 plt.tight_layout()
+print("Graph: Shows the 10 license plates most often detected by the system.")
 plt.show()
 
 plt.figure(figsize=(10, 6))
@@ -120,6 +123,7 @@ plt.xlabel('Hour of Day')
 plt.ylabel('Number of Detections')
 plt.xticks(range(24))
 plt.tight_layout()
+print("Graph: Displays the number of plates detected during each hour of the day.")
 plt.show()
 
 plt.figure(figsize=(10, 6))
@@ -128,6 +132,7 @@ plt.title('Daily Plate Detection Frequency')
 plt.xlabel('Day of Week')
 plt.ylabel('Number of Detections')
 plt.tight_layout()
+print("Graph: Displays the number of plates detected on each day of the week.")
 plt.show()
 
 df_log = df_log.sort_values(by='Timestamp').reset_index(drop=True)
@@ -141,6 +146,7 @@ plt.xlabel('Time')
 plt.ylabel('Cumulative Number of Detections')
 plt.grid(True)
 plt.tight_layout()
+print("Graph: Visualizes the total accumulation of detected license plates over time.")
 plt.show()
 
 char_type_counts = char_stats.sum()
@@ -151,5 +157,6 @@ plt.title('Distribution of Character Types in Plate Numbers')
 plt.xlabel('Character Type')
 plt.ylabel('Total Count')
 plt.tight_layout()
+print("Graph: Breaks down the count of different character types found in the plates.")
 plt.show()
 print("Displayed bar plot of character type distribution.")

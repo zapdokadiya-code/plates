@@ -4,3 +4,7 @@ pandas
 numpy
 matplotlib
 seaborn
+streamlit
+plotly
+statsmodels
+scikit-learn

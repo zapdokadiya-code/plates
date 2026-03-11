@@ -44,4 +44,5 @@ logs/
 .vscode/
 
 # CSV / Data files (optional, depending on if you want to push log data)
-# plate_log.csv
+plate_log.csv
+plates/

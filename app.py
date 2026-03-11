@@ -3,6 +3,7 @@ import cv2
 import pandas as pd
 import os
 import numpy as np
+import unicodedata
 from datetime import datetime
 
 # -----------------------------
@@ -56,17 +57,41 @@ while True:
     plates = plate_cascade.detectMultiScale(gray, 1.1, 4)
 
     for (x, y, w, h) in plates:
-        plate_img = frame[y:y+h, x:x+w]
+        # --- 1. Pad the bounding box slightly ---
+        # Often the cascade crops too tightly causing letters on edges to get cut off or misread.
+        pad_y = int(h * 0.15)
+        pad_x = int(w * 0.15)
+        y1, y2 = max(0, y - pad_y), min(frame.shape[0], y + h + pad_y)
+        x1, x2 = max(0, x - pad_x), min(frame.shape[1], x + w + pad_x)
+        plate_img = frame[y1:y2, x1:x2]
+        
+        # --- 2. Aggressive Preprocessing for OCR ---
+        # Scale up significantly
+        plate_img_resized = cv2.resize(plate_img, None, fx=3.0, fy=3.0, interpolation=cv2.INTER_CUBIC)
+        # Convert to Grayscale
+        plate_img_gray = cv2.cvtColor(plate_img_resized, cv2.COLOR_BGR2GRAY)
+        # Denoise before thresholding
+        plate_img_blur = cv2.GaussianBlur(plate_img_gray, (5, 5), 0)
+        # Extreme contrast: Otsu's Thresholding to make text purely black and white
+        _, plate_img_thresh = cv2.threshold(plate_img_blur, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-        result = reader.readtext(plate_img)
+        # Force easyocr to only return alphanumeric characters
+        result = reader.readtext(plate_img_thresh, allowlist="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
         if result:
             # Drawing a rectangle around the detected plate
             cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0), 2)
             
-            # Extracted plate text
-            plate_text = result[0][-2]
-            plate_text = str(plate_text).upper().replace(" ", "")
+            # Combine all extracted text chunks
+            plate_text = "".join([res[1] for res in result])
+            # Translate Devanagari numerals to standard numerals
+            translation_table = str.maketrans("०१२३४५६७८९", "0123456789")
+            plate_text = plate_text.translate(translation_table)
+            
+            # Convert any styled alphabets/numerals to normal ASCII equivalents
+            plate_text = unicodedata.normalize('NFKD', plate_text).encode('ascii', 'ignore').decode('ascii')
+            
+            plate_text = ''.join(filter(str.isalnum, plate_text)).upper().replace(" ", "")
             confidence = result[0][-1]
 
             cv2.putText(frame, f"{plate_text} ({confidence:.2f})", (x, y-10),
